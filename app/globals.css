@@ -1,0 +1,1264 @@
+@import "tailwindcss";
+
+:root {
+  --black: #000000;
+  --white: #ffffff;
+  --border: #ffffff;
+
+  /* --font-heading / --font-body / --font-cartograph-mono are injected by
+     next/font/local (see app/layout.tsx). Headings use Arial Nova Light
+     (weight 300 — the file itself is Light, not a synthetic thinning of
+     Regular), body copy uses Arial Nova Condensed, nav/email use
+     Cartograph Mono. */
+  --font-mono: var(--font-cartograph-mono), ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", monospace;
+}
+
+* {
+  box-sizing: border-box;
+  border-radius: 0 !important;
+}
+
+html {
+  /* The whole site is meant to read like a page viewed at ~135% browser
+     zoom — bigger type, bigger everything, not just one section. */
+  zoom: 1.215;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--black);
+  color: var(--white);
+}
+
+html {
+  /* overflow-x here alone (not on body too) keeps the normal
+     body→viewport overflow propagation intact, so html stays the single
+     scroll container (one scrollbar). Putting a non-visible overflow on
+     BOTH html and body defeats that propagation and makes body clip
+     itself to the viewport height instead of auto-sizing to its content —
+     which silently cut off the bottom of tall pages. */
+  overflow-x: hidden;
+  /* Инструменты/Последователи/Вступить к нам in the header are #anchor
+     links to sections on the homepage, not separate pages — smooth-scroll
+     to them, and offset the landing spot by the fixed header's height so
+     it doesn't land the section title underneath the header bar. */
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(56px + env(safe-area-inset-top, 0px));
+}
+
+body {
+  font-family: var(--font-body, Arial, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Header is position:fixed (always visible, even mid-scroll) and removed
+     from normal flow, so the page content needs this offset to not start
+     underneath it. Keep in sync with the header's own height (56px) —
+     plus safe-area-inset-top, since the header itself is now pushed down
+     by that same amount (see Header.tsx) to make room for the black bar
+     covering the notch/status-bar area above it. */
+  padding-top: calc(56px + env(safe-area-inset-top, 0px));
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-heading, Arial, sans-serif);
+  font-weight: 300;
+  letter-spacing: -0.045em;
+  line-height: 0.94;
+  margin: 0;
+}
+
+p,
+li {
+  font-family: var(--font-body, Arial, sans-serif);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* Still no blur/glass anywhere — box-shadow for depth is fine now, but no backdrop blur. */
+* {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+/* Header nav: full inline links above the breakpoint, a burger-triggered
+   dropdown below it (once the links would start crowding/wrapping). */
+.header-nav-full {
+  display: flex;
+}
+
+.header-nav-toggle {
+  display: none;
+  position: relative;
+}
+
+@media (max-width: 1000px) {
+  .header-nav-full {
+    display: none;
+  }
+
+  .header-nav-toggle {
+    display: block;
+  }
+}
+
+.header-logo {
+  width: 34px;
+  height: 34px;
+}
+
+@media (min-width: 1001px) {
+  .header-logo {
+    /* Header row is a fixed 56px tall — 60px was taller than the row
+       itself and stuck out past its edges. */
+    width: 46px;
+    height: 46px;
+  }
+}
+
+.header-burger {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+@media (max-width: 700px) {
+  .header-burger {
+    gap: 4px;
+    width: 22px;
+    height: 22px;
+  }
+}
+
+.header-burger span {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: var(--white);
+}
+
+.header-dropdown {
+  position: absolute;
+  top: calc(100% + 15px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  background: var(--black);
+  border: 1px solid var(--white);
+}
+
+.header-dropdown a {
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  white-space: nowrap;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.header-dropdown a:last-child {
+  border-bottom: none;
+}
+
+/* Locked to the reference PDF's own design width (1024pt page). Sections
+   with a background slice from that PDF (lib/pdfBackground.ts) use a fixed
+   1024px background-size — keeping .container at that same width is what
+   keeps each row's real icon/image lined up over its shadow horizontally. */
+.container {
+  max-width: 1024px;
+  margin: 0 auto;
+  padding: 0 clamp(20px, 4vw, 56px);
+}
+
+/* Services only: not the site's usual centered 1024px column with side
+   margins — runs the full viewport width (small edge padding only) so the
+   much bigger text + image pairs have room to sit side by side without
+   wrapping, and the row itself reads as edge-to-edge rather than boxed in. */
+.container--wide {
+  max-width: none;
+  padding: 0 clamp(24px, 4vw, 64px);
+}
+
+/* Services rows: the position:absolute photos are anchored to this row's
+   own right/left edge (see .service-row__image-wrap), and .container--wide
+   has no max-width — so at a wide-enough viewport (zoomed out, ultra-wide
+   window) the row keeps growing and the photo drifts further and further
+   from the text instead of staying put. Capping the row's own width here
+   stops that drift while leaving every normal/tested viewport size (well
+   under this cap) looking exactly like it did with plain .container--wide. */
+.container--wide-bounded {
+  max-width: 1400px;
+}
+
+.section {
+  position: relative;
+  /* Needed so .section-noise's z-index:-1 stays contained behind this
+     section's own content instead of escaping to paint behind the whole
+     page (position:relative alone doesn't create a stacking context). */
+  isolation: isolate;
+  padding: clamp(50px, 8vw, 110px) 0;
+}
+
+/* Full-bleed elements (e.g. .service-row__image-wrap's 100vw + negative-
+   margin breakout) are meant to reach exactly the viewport edge, but
+   100vw itself can be a little wider than the true visible width, and
+   with no overflow:hidden any closer than html's own (site-wide) rule,
+   the couple of px difference still counts toward
+   document.documentElement.scrollWidth — html's overflow-x:hidden stops
+   it from being visibly scrollable, but scrollWidth itself reports the
+   unclipped extent regardless of an element's own overflow, and mobile
+   pinch-zoom-out isn't guaranteed to respect overflow:hidden the way
+   normal scrolling does. Clipping here, exactly at the section's own
+   (already viewport-width) edge, contains it without cutting off any of
+   the intended bleed. */
+@media (max-width: 700px) {
+  .section {
+    overflow-x: hidden;
+  }
+}
+
+.hairline {
+  height: 1px;
+  background: currentColor;
+  width: 100%;
+}
+
+/* Hero parallax is JS-driven (see Hero.tsx) — tried a CSS scroll-timeline
+   version here instead (animation-timeline/view-timeline), which is
+   architecturally the right idea (compositor-only, no per-frame JS) but
+   real testers hit it actually not animating on both Safari (mobile) and
+   the Zen in-app browser (desktop) despite CSS.supports() reporting the
+   syntax as understood — supports() only confirms the browser can PARSE
+   animation-timeline, not that its scroll-driven-animations
+   implementation is complete/correct, and both of those engines'
+   implementations are new enough to have real gaps. A plain scroll
+   listener + rAF is old enough to be reliable everywhere, at the cost of
+   a small, deliberately cheap per-frame JS write (translate-only on
+   mobile — see Hero.tsx for why that's safe re: the ~10fps report that
+   started this whole detour). */
+.hero-section {
+  height: 78svh;
+  min-height: 480px;
+  max-height: 760px;
+}
+
+/* A landscape source photo under object-fit:cover in a tall mobile frame
+   was reading as "too zoomed in" (only a thin vertical sliver visible),
+   and object-fit:contain to show the whole photo left ugly letterboxing —
+   the actual want is a portrait frame filled edge-to-edge, same as any
+   phone-shaped crop of a photo. Pinning the frame itself to a ratio
+   (instead of deriving its height from svh, which drifts across devices)
+   makes that crop consistent rather than incidental. 9/8 reads as a
+   shorter banner strip (roughly half the height of a straight 9/16 crop)
+   rather than a near-full-screen portrait photo. */
+@media (max-width: 700px) {
+  .hero-section {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    aspect-ratio: 9 / 8;
+  }
+
+  /* Stays vertically centered (align-items:center, inherited from the
+     inline style) rather than top-pinned — just nudged up a bit from
+     dead-center so it doesn't sit exactly in the frame's middle. */
+  .hero-heading-wrap .container {
+    transform: translateY(-18%);
+  }
+}
+
+.hero-parallax-layer {
+  will-change: transform;
+}
+
+/* Dimming lives on a separate static layer instead of as opacity on the
+   animated image itself — a transform-animated element with opacity < 1
+   forces the browser to alpha-blend it against whatever's behind it on
+   every frame, which is extra compositor cost for no visual difference
+   from dimming with an unanimated sibling on top (same 0.85*image +
+   0.15*black math either way, since the section behind is solid black). */
+.hero-dim {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.hero-image {
+  object-fit: cover;
+  object-position: center 30%;
+}
+
+/* Faint ambient glow behind the QR code, not a graphic — low opacity is
+   what's doing the actual work here. fingerprint-blotch.png is a fully
+   *opaque* black-canvas/white-ridge image (flattened, no transparency to
+   fight when blurring); a soft blur with barely any contrast push just
+   lightens the area unevenly, reads as depth/atmosphere behind the QR
+   rather than a visible white shape sitting on the page. mix-blend-mode:
+   screen keeps the black canvas from ever darkening anything — only the
+   faint lightening from the ridge pattern shows at all. */
+.join-qr-texture {
+  position: absolute;
+  inset: -55%;
+  z-index: 0;
+  background-image: url(/assets/thumbTexture/fingerprint-blotch.png);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(30px) contrast(2);
+  mix-blend-mode: screen;
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+.join-text-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.join-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+.join-qr {
+  position: relative;
+  flex-shrink: 0;
+  margin-right: 40px;
+  transform: translateY(-75px);
+  z-index: 1;
+}
+
+.join-text {
+  position: relative;
+  z-index: 2;
+  font-size: 27px;
+  line-height: 1.4;
+  text-align: justify;
+  flex: 1;
+  min-width: 0;
+  transform: translate(-40px, 40px);
+}
+
+/* The QR box's width/height came only from JoinSection.tsx's qrSize prop
+   (450/540px, inline style) with no mobile handling — on a phone that's
+   wider than the viewport itself. flex-wrap:nowrap then forced the
+   paragraph into whatever negative space was left over, and the -75px/
+   -40px/40px translate offsets (tuned to tuck the QR up under the
+   heading on a wide desktop row) just shoved everything further
+   off-layout on a narrow column. Below 700px: stack QR above text, cap
+   the QR to a sane on-screen size (!important needed — the box's own
+   width/height come from JoinSection.tsx's inline style, which otherwise
+   wins over this rule), and drop the desktop-only translate offsets. */
+@media (max-width: 700px) {
+  .join-row {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .join-qr {
+    width: min(320px, 82vw) !important;
+    height: min(320px, 82vw) !important;
+    margin-right: 0;
+    margin-bottom: 20px;
+    transform: none;
+  }
+
+  .join-text {
+    font-size: 17px;
+    text-align: left;
+    transform: none;
+  }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  border: 1px solid currentColor;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn:hover {
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.65);
+}
+
+.btn:hover {
+  background: var(--white);
+  color: var(--black);
+}
+
+::selection {
+  background: var(--white);
+  color: var(--black);
+}
+
+/* Investigation/article detail pages flip to a white background — the
+   default inverted selection above (white bg, black text) would make a
+   selection nearly invisible there (white highlight on an already-white
+   page), so flip it back the other way just for that theme. */
+.section--white-theme ::selection {
+  background: var(--black);
+  color: var(--white);
+}
+
+/* Admin panel is a plain white/black tool, not the public site's theme —
+   restore normal (visible) text selection and normal heading styling there,
+   since the global thin/tight h1-h4 rule and inverted ::selection above are
+   meant for the public black background, not a white admin form. */
+.admin-scope ::selection {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.admin-scope h1,
+.admin-scope h2,
+.admin-scope h3,
+.admin-scope h4 {
+  font-family: var(--font-body);
+  font-weight: 700;
+  letter-spacing: normal;
+  line-height: 1.3;
+}
+
+.admin-scope .ProseMirror h2 {
+  font-size: 22px;
+  margin: 20px 0 10px;
+}
+
+.admin-scope .ProseMirror h3 {
+  font-size: 18px;
+  margin: 16px 0 8px;
+}
+
+.admin-scope .ProseMirror p {
+  margin: 10px 0;
+}
+
+.admin-scope .ProseMirror ul,
+.admin-scope .ProseMirror ol {
+  padding-left: 22px;
+  margin: 10px 0;
+}
+
+.admin-scope .ProseMirror ul {
+  list-style-type: disc;
+}
+
+.admin-scope .ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.admin-scope .ProseMirror mark {
+  color: inherit;
+}
+
+.admin-scope .ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 12px 0;
+}
+
+.admin-scope .ProseMirror .tableWrapper {
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.admin-scope .ProseMirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+.admin-scope .ProseMirror th,
+.admin-scope .ProseMirror td {
+  min-width: 1em;
+  border: 1px solid #000;
+  padding: 6px 8px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.admin-scope .ProseMirror th {
+  font-weight: 700;
+  text-align: left;
+  background: #f4f4f4;
+}
+
+.admin-scope .ProseMirror .selectedCell:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.08);
+  pointer-events: none;
+}
+
+.admin-scope .ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background-color: #000;
+  pointer-events: none;
+}
+
+.admin-scope .ProseMirror.resize-cursor {
+  cursor: col-resize;
+}
+
+.section-head {
+  margin-bottom: clamp(28px, 5vw, 48px);
+}
+
+.section-head--center {
+  text-align: center;
+}
+
+.section-head h2 {
+  font-size: clamp(44px, 7vw, 92px);
+}
+
+.section-head h1 {
+  font-size: clamp(36px, 5.5vw, 72px);
+}
+
+/* Bordered cell grid shared by investigations (bento) and articles (3-col) */
+.post-grid {
+  display: grid;
+  gap: 1px;
+  background: var(--white);
+  border: 1px solid var(--white);
+}
+
+.post-grid--bento {
+  grid-template-columns: 1fr 1fr;
+}
+
+.post-grid--bento > :first-child {
+  grid-row: span 2;
+}
+
+.post-grid--triple {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.post-cell {
+  background: var(--black);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55);
+  transition: box-shadow 0.3s ease;
+}
+
+.post-cell:hover {
+  box-shadow: 0 28px 56px rgba(0, 0, 0, 0.7);
+}
+
+.post-cell__caption {
+  font-family: var(--font-body);
+  font-size: 19px;
+  line-height: 1.5;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--white);
+  overflow-wrap: anywhere;
+}
+
+.post-cell__caption b {
+  font-weight: 400;
+}
+
+.post-grid--bento .post-cell__caption {
+  text-align: justify;
+}
+
+.post-cell__frame {
+  position: relative;
+  flex: 1;
+  min-height: 220px;
+  overflow: hidden;
+}
+
+.post-grid--triple .post-cell__frame {
+  aspect-ratio: 1 / 1;
+}
+
+.post-cell__image {
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.post-cell:hover .post-cell__image {
+  transform: scale(1.05);
+}
+
+/* Card grids below have no responsive layout of their own — collapse to a
+   single stacked column under 700px (matches the breakpoint already used
+   by these cards' Image `sizes` props) so the bento's forced 2-column
+   span doesn't fight for space on a phone screen. (.report-row's own
+   mobile override lives further down, right after its base rules — it
+   has to come after them in source order to actually win the cascade;
+   this block used to also hold it, positioned before .report-row's base
+   rules, which silently lost every property fight since equal-specificity
+   ties resolve by source order, not by which block "looks" more specific.) */
+@media (max-width: 700px) {
+  .post-grid--bento,
+  .post-grid--triple {
+    grid-template-columns: 1fr;
+  }
+
+  .post-grid--bento > :first-child {
+    grid-row: auto;
+  }
+}
+
+/* Full list pages (/investigations, /articles): image + full text row */
+.report-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.report-row {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--white);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.55);
+  transition: box-shadow 0.3s ease;
+}
+
+.report-row:hover {
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.7);
+}
+
+.report-row__image {
+  position: relative;
+  width: 38%;
+  min-width: 160px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--white);
+  background: #111;
+}
+
+.report-row__text {
+  padding: 20px 24px;
+  flex: 1;
+  min-width: 0;
+}
+
+.report-row__title {
+  font-weight: 700;
+  font-size: 21px;
+  line-height: 1.5;
+  max-height: 3em;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  color: var(--white);
+}
+
+.report-row__excerpt {
+  font-size: 16px;
+  line-height: 1.6;
+  text-align: justify;
+  height: 9.6em;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  overflow: hidden;
+  color: var(--white);
+}
+
+/* Has to come after .report-row/.report-row__image's own rules above —
+   same specificity (single class each), so source order decides ties,
+   and this needs to win at mobile widths. */
+@media (max-width: 700px) {
+  .report-row {
+    flex-direction: column;
+  }
+
+  .report-row__image {
+    width: 100%;
+    min-width: 0;
+    aspect-ratio: 16 / 9;
+    border-right: none;
+    border-bottom: 1px solid var(--white);
+  }
+}
+
+/* Investigation / article detail page — the whole page (title + content)
+   flips to a white theme, unlike every other page on the black-background
+   site. The fixed global header/nav is untouched (rendered outside this
+   section). */
+.section--white-theme {
+  position: relative;
+  color: #000;
+}
+
+/* The site's `zoom: 1.35` (see html above) makes vh-based min-height
+   undercount how tall an element actually needs to be to cover the real
+   viewport, so a short investigation/article would end before the
+   viewport does and leave the page's black background showing below it.
+   A `position: fixed` backdrop sidesteps that: fixed elements size against
+   the real viewport regardless of an ancestor's zoom, so this reliably
+   covers the full screen no matter how much (or little) content there is. */
+.white-theme-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  z-index: -1;
+}
+
+.section--white-theme .rich-content h2 {
+  border-top-color: rgba(0, 0, 0, 0.15);
+}
+
+.section--white-theme .rich-content li::marker {
+  color: #000;
+}
+
+.cover-card__frame-detail {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--white);
+  overflow: hidden;
+}
+
+/* Admin-authored rich text (article/investigation body, services page) */
+.rich-content {
+  max-width: 720px;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.rich-content > *:first-child {
+  margin-top: 0;
+}
+
+/* Services page only — center the block itself (not just text-align on
+   the h1) so the heading lines up with the screen center the same way
+   .section-head--center does on investigations/articles/etc. Articles and
+   investigations keep the default left-flush reading column. */
+.rich-content--centered {
+  margin: 0 auto;
+}
+
+.rich-content h1 {
+  font-size: clamp(36px, 5.5vw, 72px);
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.rich-content h2 {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: clamp(22px, 3vw, 30px);
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.rich-content h3 {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 20px;
+  margin-top: 28px;
+}
+
+.rich-content p {
+  margin: 14px 0;
+}
+
+.rich-content ul,
+.rich-content ol {
+  padding-left: 22px;
+  margin: 14px 0;
+}
+
+.rich-content ul {
+  list-style-type: disc;
+}
+
+.rich-content ol {
+  list-style-type: decimal;
+}
+
+.rich-content li::marker {
+  color: var(--white);
+}
+
+.rich-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 24px 0;
+}
+
+.rich-content li {
+  margin-bottom: 8px;
+}
+
+.rich-content b,
+.rich-content strong {
+  font-weight: 700;
+}
+
+.rich-content a {
+  text-decoration: underline;
+}
+
+.rich-content .tableWrapper {
+  overflow-x: auto;
+  margin: 20px 0;
+}
+
+.rich-content table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0;
+}
+
+.rich-content th,
+.rich-content td {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.rich-content th {
+  font-weight: 700;
+}
+
+.section--white-theme .rich-content th,
+.section--white-theme .rich-content td {
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+/* Icon / logo list rows: tools, partners. Sizing measured directly off the
+   PDF's own embedded image coordinates at its 1024px design width: icon
+   circles are 92.3pt across, row-to-row spacing (top to top) is ~112pt —
+   i.e. a ~20pt gap between circles, not the ~40px this had before. */
+/* align-items stays at its default (stretch) — .list-row is wrapped in a
+   <Reveal> (an unstyled motion.div), and .list-row's own width:100% only
+   resolves correctly if that Reveal wrapper itself is stretched to the
+   full column width; align-items:center here would shrink the wrapper to
+   its content instead, and 100% of an auto-sized parent falls back to
+   content size (rows ending up sized by their own text length, not
+   actually centered).
+   The row itself is capped to a fixed max-width and centered with
+   margin:auto — NOT justify-content:center on a full-width row, which
+   centers the icon+text pair as a group and shifts the icon sideways by
+   however much shorter or longer that row's own text happens to be.
+   With a fixed-width row and .list-row__text at flex:1, the icon sits at
+   the same x on every row and only the text's own box grows/shrinks. */
+.list-rows {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 2vw, 24px);
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(20px, 3vw, 28px);
+  width: 100%;
+  max-width: 800px;
+  /* Rows with a url render as <a> now (see ListSection.tsx) — reset the
+     browser's default link styling so a linked row looks identical to an
+     unlinked one. */
+  color: inherit;
+  text-decoration: none;
+  /* Off-center on purpose: margin:auto alone would land it dead on screen
+     center; the translateX shifts the whole centered block further right. */
+  margin: 0 auto;
+  transform: translateX(8%);
+}
+
+.list-row__icon-outer {
+  position: relative;
+  width: clamp(88px, 10vw, 118px);
+  height: clamp(88px, 10vw, 118px);
+  flex-shrink: 0;
+}
+
+/* Фон-подложка с отпечатком за каждой иконкой — один из 24 готовых
+   шаблонов (public/assets/backgroundTrmplates), выбирается для каждого
+   элемента в ListSection.tsx (pickGlowTemplate). Без фильтров/тонирования
+   — просто картинка, размытая только по краям через filter: blur() (сама
+   круглая аватарка лежит поверх, z-index: 1 против z-index: 0 у подложки,
+   и полностью закрывает центральную часть картинки — блюр физически не
+   касается того, что видно под аватаркой, размывается только выступающий
+   наружу край). inset подобран так, чтобы подложка не вылезала на
+   соседнюю строку списка — gap между строками всего 14px на мобильном,
+   раньше при -50% подложка выступала намного сильнее этого зазора. */
+.list-row__icon-glow {
+  position: absolute;
+  inset: -17%;
+  z-index: 0;
+  background-size: 215%;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  filter: blur(1px) brightness(2.4);
+  mask-image: radial-gradient(circle closest-side, black 55%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle closest-side, black 55%, transparent 100%);
+}
+
+#partners .list-row__icon-glow {
+  opacity: 0.6;
+}
+
+/* Тёмное пятно поверх подложки-отпечатка — как в старой процедурной
+   версии, где ореол собирался из случайных radial-gradient «пятен».
+   Лежит между подложкой (z-index: 0) и самой аватаркой (z-index: 1) —
+   аватарка всегда закрывает центр сверху, поэтому пятно физически не
+   может задеть саму фотографию/логотип, только фон-отпечаток вокруг
+   неё. Радиус задан явным процентом (ellipse XX% XX%, не closest-side)
+   — иначе для угловых сторон света (СЗ/СВ/ЮЗ/ЮВ) closest-side считает
+   маленький радиус от края и пятно повисает мелким несвязанным кружком
+   вместо того чтобы перекрывать край подложки. Положение (одна из 8
+   сторон света) задаётся в ListSection.tsx (pickCataractPosition),
+   детерминированно по id. */
+.list-row__icon-cataract {
+  position: absolute;
+  inset: -17%;
+  z-index: 0;
+  filter: blur(4px);
+  pointer-events: none;
+}
+
+.list-row__icon-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 50% !important;
+  overflow: hidden;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.6);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+}
+
+/* Same hover treatment as .follower-circle (Последователи) — scale the
+   icon up slightly when hovering anywhere on its row, not just the icon
+   itself, since text and icon read as one clickable unit here. */
+.list-row:hover .list-row__icon-wrap {
+  transform: scale(1.08);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.7);
+}
+
+.list-row__icon-wrap img {
+  border-radius: 50% !important;
+}
+
+.list-row__text {
+  flex: 1;
+  min-width: 0;
+  max-width: 460px;
+  font-size: 24px;
+  line-height: 1.5;
+}
+
+@media (max-width: 700px) {
+  .list-row__text {
+    font-size: 18px;
+  }
+}
+
+.list-row__name {
+  font-weight: 700;
+}
+
+/* Text + illustration rows: services. Kept tight/clustered on purpose —
+   short gap between rows, image vertically centered against its text
+   (align-items: center) so it reads as sitting directly across from the
+   text block rather than floating independently above/below it. */
+.service-rows {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.5vw, 20px);
+}
+
+/* Text and photo are independent of each other, not two flex items
+   negotiating shared space — the photo is taken out of flow entirely
+   (position:absolute) and pinned to whichever edge it's on, at whatever
+   size it wants; the text is a plain block that has no idea the image
+   exists, sized purely by its own max-width. Neither one shrinks, wraps,
+   or repositions because of the other. min-height on the row is what
+   keeps the (out-of-flow) image from collapsing the row down to just the
+   text's height. */
+.service-row {
+  position: relative;
+  min-height: clamp(220px, 16vw, 340px);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Image-on-the-left rows: text still doesn't know the image exists, it
+   just gets told to sit at the row's other end. */
+.service-row--reversed {
+  justify-content: flex-end;
+}
+
+.service-row__text {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+}
+
+.service-row__name {
+  font-weight: 700;
+}
+
+.service-row__desc {
+  font-size: 33px;
+  line-height: 1.4;
+}
+
+/* mask-image fades the plain JPG's own rectangular edges to nothing
+   instead of a hard cutoff against the page — `closest-side` sizes the
+   ellipse's radius to each axis's own half of the box independently, so
+   the fade reaches transparent right at the edge on every side regardless
+   of the 3:2 aspect ratio (a shared pixel radius on both axes was tried
+   here before and overshoots the shorter/vertical half-extent, so the
+   fade never finishes there — reads as an abrupt cutoff top/bottom while
+   the sides fade fine).
+   Pushed a bit past the actual screen edge on its outer side — safe,
+   because that edge of the mask is already faded to fully transparent,
+   so what's bleeding off is empty space, not the subject. */
+.service-row__image-wrap {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 0;
+  width: clamp(660px, 43vw, 940px);
+  aspect-ratio: 3 / 2;
+  mask-image: radial-gradient(ellipse closest-side at center, black 32%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse closest-side at center, black 32%, transparent 100%);
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+/* Links to /services now (see ServiceRows.tsx) — a small hover zoom to
+   read as clickable. Keeps the translateY(-50%) centering (a plain
+   scale() on hover would silently drop it and jump the image). */
+.service-row__image-wrap:hover {
+  transform: translateY(-50%) scale(1.03);
+}
+
+.service-row__image-wrap--right {
+  right: clamp(-270px, -17vw, -130px);
+}
+
+.service-row__image-wrap--left {
+  left: clamp(-270px, -17vw, -130px);
+}
+
+/* sim.jpg — pulled in closer than the shared -270/-130 offset. */
+.service-row__image-wrap--sim {
+  right: clamp(-140px, -9vw, -60px);
+}
+
+/* docs.jpg / books.jpg — sim.jpg stays at the base size. */
+.service-row__image-wrap--big {
+  width: clamp(750px, 50vw, 1080px);
+}
+
+/* Neither .service-row nor its image-wrap had any mobile handling at all —
+   the 33px description text alone would wrap to 15-20 lines on a narrow
+   column (rows measured 560-620px tall on a 375px phone), and the image's
+   700-1150px width with a negative bleed-off-screen offset (tuned for
+   spilling past a desktop viewport's edge) instead spilled across nearly
+   the entire phone screen, overlapping the text. Below 700px: drop the
+   desktop bleed layout for a plain stacked column (text, then image,
+   image brought back into normal flow at a small contained size) and a
+   readable font size. The radial mask-image fade existed to blend the
+   image's rectangular edges into the desktop bleed — with the image
+   fully contained and no longer bleeding off-screen, it's not needed. */
+@media (max-width: 700px) {
+  .service-row {
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 0;
+    gap: 16px;
+    padding: 8px 0;
+  }
+
+  .service-row__desc {
+    font-size: 19px;
+  }
+
+  .service-row__image-wrap {
+    position: relative;
+    top: auto;
+    left: auto !important;
+    right: auto !important;
+    transform: none;
+    /* Full-bleed to the actual screen edge instead of staying inside the
+       column's own (already-narrow-on-mobile) padding — the column alone
+       only leaves ~320px on a 375px phone either way, too small a photo
+       to read as intentional rather than an afterthought. */
+    width: 100vw;
+    max-width: 100vw;
+    margin: 0 calc(50% - 50vw);
+    /* The source renders are square and object-fit:contain — at the old
+       3/2 (landscape) frame, a square image is constrained by the frame's
+       *height*, rendering at only 2/3 of the full 100vw width with dead
+       letterbox space on either side. Frame width is already maxed at
+       100vw (can't go wider without exceeding the screen), so a square
+       frame is the largest a contain-fit square image can possibly
+       render here: width becomes the constraint instead, filling the
+       full 100vw edge to edge — ~1.5x the old linear size, ~2.25x the
+       visible area. */
+    aspect-ratio: 1 / 1;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+}
+
+/* Followers / partners marquee */
+.followers-section {
+  position: relative;
+  padding-top: clamp(8px, 1.2vw, 20px);
+}
+
+.followers-section__backdrop {
+  position: absolute;
+  inset: 20% 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.32;
+  filter: grayscale(1) contrast(1.1);
+}
+
+.marquee {
+  /* Both axes stay visible — the page's own overflow-x:hidden (see html,body
+     above) clips the track's excess width at the viewport edge instead, so
+     a hovered/scaled circle is never cut off locally. */
+  overflow: visible;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 24px 0;
+}
+
+/* The track repeats the follower list enough times for a seamless loop,
+   which makes it genuinely very wide (thousands of px) — relying on
+   html's own overflow-x:hidden to clip that at the viewport edge left
+   document.documentElement.scrollWidth reporting that full width, which
+   pinch-zooming out on mobile could expose as a huge blank area past the
+   real content. Hover doesn't really apply on touch anyway, so clipping
+   locally here (the thing the html-level approach was specifically
+   avoiding, for desktop's hover-scale) is safe on mobile specifically. */
+@media (max-width: 700px) {
+  .marquee {
+    overflow-x: hidden;
+  }
+}
+
+.marquee__track {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll linear infinite;
+  animation-duration: var(--marquee-duration, 40s);
+}
+
+.marquee:hover .marquee__track {
+  animation-play-state: paused;
+}
+
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.follower-circle {
+  position: relative;
+  width: clamp(120px, 12vw, 168px);
+  height: clamp(120px, 12vw, 168px);
+  margin-right: clamp(22px, 3.2vw, 44px);
+  border-radius: 50% !important;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--black);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 18px 34px rgba(0, 0, 0, 0.65);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+  cursor: pointer;
+}
+
+.follower-circle:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16), 0 24px 48px rgba(0, 0, 0, 0.75);
+  z-index: 5;
+}
+
+.follower-circle img {
+  border-radius: 50% !important;
+}
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
