@@ -46,6 +46,7 @@
   /* Правка */
   #edit { display: none; flex-direction: column; }
   #edit.on { display: flex; }
+  .meta, details.settings, .hint { flex: none; }
   .meta { padding: 10px 12px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .meta label { font-size: 12px; color: var(--muted); display: block; }
   .meta .full { grid-column: 1 / -1; }
@@ -55,6 +56,7 @@
     -webkit-appearance: none; appearance: none;
   }
   .tools {
+    flex: none; min-height: 52px;
     display: flex; gap: 6px; overflow-x: auto; padding: 10px 12px; -webkit-overflow-scrolling: touch;
     position: sticky; top: 0; background: #fff; border-bottom: 1px solid var(--line); z-index: 1;
   }
@@ -77,6 +79,35 @@
   #pdfbox { display: none; gap: 8px; padding: 10px 12px; background: #fff; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
   #pdfbox.on { display: flex; }
   .hint { color: var(--muted); font-size: 13px; padding: 4px 12px 12px; }
+
+  /* Правка готового PDF */
+  #pdfed { background: #e9e9e9; }
+  #pe-empty { padding: 24px 16px; background: #fff; }
+  #pe-empty p { color: var(--muted); font-size: 14px; }
+  #pe-bar { position: sticky; top: 0; z-index: 5; background: #fff; border-bottom: 1px solid var(--line);
+    display: flex; gap: 6px; padding: 8px 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  #pe-bar button { flex: none; padding: 8px 12px; white-space: nowrap; }
+  #pe-bar button.on { background: var(--fg); color: #fff; }
+  #pe-info { background: #fff; padding: 6px 12px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); }
+  #pe-pages { padding: 10px; }
+  .pg-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); margin: 6px 0; }
+  .pg-head button { padding: 4px 10px; font-size: 13px; }
+  .pg { position: relative; background: #fff; margin: 0 0 10px; box-shadow: 0 1px 4px rgba(0,0,0,.25); overflow: hidden; }
+  .pg canvas { display: block; width: 100%; height: 100%; }
+  .pg.gone { opacity: .25; }
+  .pg.rectmode { touch-action: none; }
+  .pe-cover { position: absolute; background: #fff; }
+  .pe-text { position: absolute; white-space: pre; line-height: 1.2; color: #000; font-family: "DejaVu Sans", Verdana, sans-serif; outline: 1px dashed #1a73e8; }
+  .pe-tmp { position: absolute; background: rgba(26,115,232,.25); border: 1px solid #1a73e8; }
+  .pe-hot { position: absolute; background: rgba(26,115,232,.18); pointer-events: none; }
+  #dlg { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: flex-end; z-index: 50; }
+  #dlg.on { display: flex; }
+  #dlg .box { background: #fff; width: 100%; padding: 14px 14px calc(14px + env(safe-area-inset-bottom)); }
+  #dlg textarea { width: 100%; height: 110px; font: 16px/1.4 -apple-system, Arial, sans-serif; border: 1px solid var(--line); border-radius: 0; padding: 8px; }
+  #dlg .row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  #dlg .row input[type=number] { width: 80px; font: inherit; font-size: 16px; padding: 8px; border: 1px solid var(--line); border-radius: 0; }
+  #dlg .row .sp { flex: 1; }
+  #dlg .ttl { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
 </style>
 </head>
 <body>
@@ -84,12 +115,13 @@
 <header>
   <h1>Typst · PDF-отчёт</h1>
   <button id="btnFile" type="button">Файл</button>
-  <button id="btnPdf" class="primary" type="button">PDF</button>
+  <button id="btnPdf" class="primary" type="button">В PDF</button>
 </header>
 
 <nav>
   <button id="tabEdit" class="on" type="button">Правка</button>
   <button id="tabView" type="button">Просмотр</button>
+  <button id="tabPdf" type="button">Правка PDF</button>
 </nav>
 
 <div id="pdfbox">
@@ -137,7 +169,29 @@
     <pre id="err"></pre>
     <div id="pages"></div>
   </section>
+
+  <section id="pdfed" class="pane">
+    <div id="pe-empty">
+      <button id="peOpen" class="primary" type="button">Открыть PDF…</button>
+      <p>Выберите готовый PDF из «Файлов». Нажмите на любой текст в документе, чтобы заменить его. Нажмите на пустое место, чтобы добавить свой текст. Режим «Замазка» закрашивает участок белым. Файл не покидает телефон.</p>
+      <p>Если у PDF нет текстового слоя (скан), текст внутри него заменить нельзя, но можно закрасить участок и написать поверх.</p>
+    </div>
+    <div id="pe-bar" hidden>
+      <button type="button" data-mode="text" class="on">Текст</button>
+      <button type="button" data-mode="rect">Замазка</button>
+      <button type="button" data-mode="del">Убрать правку</button>
+      <button type="button" id="peUndo">Отмена</button>
+      <button type="button" id="peOpen2">Другой файл</button>
+      <button type="button" id="peSave" class="primary">Сохранить</button>
+    </div>
+    <div id="pe-info" hidden></div>
+    <div id="pe-pages"></div>
+  </section>
 </main>
+
+<div id="dlg"><div class="box"><div class="ttl" id="dlgTtl"></div><textarea id="dlgText"></textarea>
+<div class="row"><label for="dlgSize">Размер</label><input id="dlgSize" type="number" min="4" max="200" step="0.5"><span class="sp"></span><button type="button" id="dlgNo">Отмена</button><button type="button" class="primary" id="dlgOk">Готово</button></div></div></div>
+<input id="pdfIn" type="file" accept="application/pdf,.pdf" hidden>
 
 <input id="fileIn" type="file" accept=".typ,.txt,text/plain" hidden>
 
@@ -259,16 +313,18 @@
   }
 
   /* ---------- вкладки ---------- */
-  function show(view) {
-    viewOn = view;
-    $("edit").classList.toggle("on", !view);
-    $("view").classList.toggle("on", view);
-    $("tabEdit").classList.toggle("on", !view);
-    $("tabView").classList.toggle("on", view);
-    if (view && dirty) render();
+  function show(name) {
+    viewOn = name === "view";
+    ["edit", "view", "pdfed"].forEach(function (id) { $(id).classList.toggle("on", id === name || (id === "pdfed" && name === "pdf" )); });
+    $("tabEdit").classList.toggle("on", name === "edit");
+    $("tabView").classList.toggle("on", name === "view");
+    $("tabPdf").classList.toggle("on", name === "pdf");
+    if (name === "view" && dirty) render();
+    if (name === "pdf" && window.__peShown) window.__peShown();
   }
-  $("tabEdit").onclick = function () { show(false); };
-  $("tabView").onclick = function () { show(true); };
+  $("tabEdit").onclick = function () { show("edit"); };
+  $("tabView").onclick = function () { show("view"); };
+  $("tabPdf").onclick = function () { show("pdf"); };
 
   /* ---------- панель вставки ---------- */
   $("tools").addEventListener("click", function (ev) {
@@ -303,27 +359,35 @@
     var n = ($("title").value || "otchet").trim().replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "_");
     return (n || "otchet") + ".pdf";
   }
+  // общий вывод готового PDF (и для Typst, и для правки чужого PDF)
+  window.__offerPdf = function (blob, name) {
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    pdfBlob = blob; pdfUrl = URL.createObjectURL(blob);
+    var a = $("pdfLink"); a.href = pdfUrl; a.download = name;
+    $("pdfbox").dataset.name = name;
+    $("pdfbox").classList.add("on");
+    var can = false;
+    try { can = !!(navigator.canShare && navigator.canShare({ files: [new File([blob], name, { type: "application/pdf" })] })); } catch (e) {}
+    $("btnShare").style.display = can ? "" : "none";
+  };
+  window.__hidePdf = function () { $("pdfbox").classList.remove("on"); };
   $("btnPdf").onclick = async function () {
     var b = $("btnPdf"); b.disabled = true; b.textContent = "…";
     try {
       var t = await loadTypst();
       var data = await t.pdf({ mainContent: buildSource() });
-      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-      pdfBlob = new Blob([data], { type: "application/pdf" });
-      pdfUrl = URL.createObjectURL(pdfBlob);
-      var a = $("pdfLink"); a.href = pdfUrl; a.download = fname();
-      $("pdfbox").classList.add("on");
-      $("btnShare").style.display = (navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], fname(), { type: "application/pdf" })] })) ? "" : "none";
+      window.__offerPdf(new Blob([data], { type: "application/pdf" }), fname());
     } catch (e) {
-      show(true);
+      show("view");
       $("err").textContent = errText(e); $("err").style.display = "block";
     }
-    b.disabled = false; b.textContent = "PDF";
+    b.disabled = false; b.textContent = "В PDF";
   };
   $("btnShare").onclick = function () {
     if (!pdfBlob) return;
-    var file = new File([pdfBlob], fname(), { type: "application/pdf" });
-    navigator.share({ files: [file], title: fname() }).catch(function () {});
+    var name = $("pdfbox").dataset.name || "otchet.pdf";
+    var file = new File([pdfBlob], name, { type: "application/pdf" });
+    navigator.share({ files: [file], title: name }).catch(function () {});
   };
 
   /* ---------- открыть / сохранить .typ ---------- */
@@ -351,6 +415,261 @@
   load();
   // Заранее подгружаем Typst в фоне, чтобы вкладка «Просмотр» открывалась быстрее
   setTimeout(function () { loadTypst().catch(function () {}); }, 500);
+})();
+</script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var CDN = "https://cdn.jsdelivr.net/npm/";
+  var U = window.__PE_URLS || {
+    pdfjs: CDN + "pdfjs-dist@3.11.174/build/pdf.min.js",
+    worker: CDN + "pdfjs-dist@3.11.174/build/pdf.worker.min.js",
+    pdflib: CDN + "pdf-lib@1.17.1/dist/pdf-lib.min.js",
+    fontkit: CDN + "@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js",
+    font: CDN + "dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf"
+  };
+
+  function loadScript(src) {
+    return new Promise(function (res, rej) {
+      var s = document.createElement("script"); s.src = src; s.onload = res;
+      s.onerror = function () { rej(new Error("Не удалось загрузить библиотеку (нужен интернет при первом запуске).")); };
+      document.head.appendChild(s);
+    });
+  }
+  var libs = null;
+  function loadLibs() {
+    if (!libs) libs = Promise.all([loadScript(U.pdfjs), loadScript(U.pdflib), loadScript(U.fontkit)]).then(function () {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = U.worker;
+    });
+    libs.catch(function () { libs = null; });
+    return libs;
+  }
+
+  var bytes = null, doc = null, pages = [], edits = [], mode = "text", nextId = 1, fileName = "document.pdf", fontBytes = null;
+  var io = null;
+
+  function info(t) { var e = $("pe-info"); e.hidden = !t; e.textContent = t || ""; }
+  function setMode(m) {
+    mode = m;
+    Array.prototype.forEach.call($("pe-bar").querySelectorAll("[data-mode]"), function (b) { b.classList.toggle("on", b.dataset.mode === m); });
+    pages.forEach(function (p) { p.box.classList.toggle("rectmode", m === "rect"); });
+    info(m === "text" ? "Нажмите на текст, чтобы заменить его, или на пустое место, чтобы добавить свой."
+       : m === "rect" ? "Проведите пальцем по странице, чтобы закрасить участок белым."
+       : "Нажмите на свою правку, чтобы убрать её.");
+  }
+
+  window.__peShown = function () { /* ничего: файл открывают кнопкой */ };
+  $("peOpen").onclick = $("peOpen2").onclick = function () { $("pdfIn").click(); };
+  $("pdfIn").onchange = function () {
+    var f = this.files[0]; this.value = ""; if (!f) return;
+    fileName = f.name;
+    var r = new FileReader();
+    r.onload = function () { openPdf(new Uint8Array(r.result)); };
+    r.readAsArrayBuffer(f);
+  };
+
+  async function openPdf(data) {
+    $("pe-empty").innerHTML = "<p>Открываю…</p>";
+    try {
+      await loadLibs();
+      bytes = data; edits = []; pages = [];
+      if (doc) { try { doc.destroy(); } catch (e) {} }
+      doc = await window.pdfjsLib.getDocument({ data: data.slice() }).promise;
+      $("pe-empty").hidden = true; $("pe-bar").hidden = false;
+      await buildPages();
+      setMode("text");
+      window.__hidePdf();
+    } catch (e) {
+      $("pe-empty").hidden = false;
+      $("pe-empty").innerHTML = '<p style="color:#b00020">Не удалось открыть PDF: ' + String(e && e.message || e).replace(/</g, "&lt;") + '</p><button id="peOpenB" class="primary" type="button">Открыть другой…</button>';
+      $("peOpenB").onclick = function () { $("pdfIn").click(); };
+    }
+  }
+
+  async function buildPages() {
+    var host = $("pe-pages"); host.innerHTML = "";
+    if (io) io.disconnect();
+    io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (en) { if (en.isIntersecting) { io.unobserve(en.target); renderPage(en.target.__p); } });
+    }, { rootMargin: "600px 0px" });
+    var W = host.clientWidth - 20 || 350;
+    for (var n = 1; n <= doc.numPages; n++) {
+      var page = await doc.getPage(n);
+      var vp1 = page.getViewport({ scale: 1 });
+      var s = W / vp1.width, vp = page.getViewport({ scale: s });
+      var head = document.createElement("div"); head.className = "pg-head";
+      var lab = document.createElement("span"); lab.textContent = "Стр. " + n + " из " + doc.numPages;
+      var del = document.createElement("button"); del.type = "button"; del.textContent = "Удалить стр.";
+      head.appendChild(lab); head.appendChild(del);
+      var box = document.createElement("div"); box.className = "pg";
+      box.style.width = vp.width + "px"; box.style.height = vp.height + "px";
+      var p = { n: n, page: page, vp: vp, s: s, box: box, rot: page.rotate || 0, gone: false, text: null, drawn: false, lab: lab };
+      del.onclick = (function (p, del) { return function () {
+        p.gone = !p.gone; p.box.classList.toggle("gone", p.gone);
+        del.textContent = p.gone ? "Вернуть" : "Удалить стр."; window.__hidePdf();
+      }; })(p, del);
+      box.__p = p; pages.push(p);
+      bindPage(p);
+      host.appendChild(head); host.appendChild(box);
+      io.observe(box);
+    }
+  }
+
+  async function renderPage(p) {
+    if (p.drawn) return; p.drawn = true;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var c = document.createElement("canvas");
+    c.width = Math.floor(p.vp.width * dpr); c.height = Math.floor(p.vp.height * dpr);
+    p.box.insertBefore(c, p.box.firstChild);
+    var vp = p.page.getViewport({ scale: p.s * dpr });
+    try { await p.page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise; } catch (e) {}
+    p.edits = true; refreshOverlay(p);
+  }
+
+  async function textItems(p) {
+    if (p.text) return p.text;
+    var tc = await p.page.getTextContent();
+    p.text = tc.items.filter(function (it) { return it.str && it.str.trim(); });
+    return p.text;
+  }
+
+  // ---- взаимодействие со страницей
+  function bindPage(p) {
+    var box = p.box, drag = null, tmp = null, moved = false, sx = 0, sy = 0;
+    function pos(ev) { var r = box.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; }
+    box.addEventListener("pointerdown", function (ev) {
+      if (mode !== "rect") return;
+      var q = pos(ev); drag = q; sx = q[0]; sy = q[1];
+      tmp = document.createElement("div"); tmp.className = "pe-tmp"; box.appendChild(tmp);
+      try { box.setPointerCapture(ev.pointerId); } catch (e) {}
+    });
+    box.addEventListener("pointermove", function (ev) {
+      if (!drag) return; var q = pos(ev);
+      tmp.style.left = Math.min(sx, q[0]) + "px"; tmp.style.top = Math.min(sy, q[1]) + "px";
+      tmp.style.width = Math.abs(q[0] - sx) + "px"; tmp.style.height = Math.abs(q[1] - sy) + "px";
+    });
+    function end(ev) {
+      if (!drag) return; var q = pos(ev); drag = null; if (tmp) { tmp.remove(); tmp = null; }
+      var x1 = Math.min(sx, q[0]), x2 = Math.max(sx, q[0]), y1 = Math.min(sy, q[1]), y2 = Math.max(sy, q[1]);
+      if (x2 - x1 < 4 || y2 - y1 < 4) return;
+      if (p.rot) return info("Эта страница повёрнута, правки на ней не поддерживаются.");
+      var a = p.vp.convertToPdfPoint(x1, y2), b = p.vp.convertToPdfPoint(x2, y1);
+      addEdit({ kind: "rect", page: p.n, x: a[0], y: a[1], w: b[0] - a[0], h: b[1] - a[1] });
+    }
+    box.addEventListener("pointerup", end);
+    box.addEventListener("pointercancel", function () { drag = null; if (tmp) { tmp.remove(); tmp = null; } });
+    box.addEventListener("click", async function (ev) {
+      var q = pos(ev);
+      if (mode === "del") {
+        var t = ev.target.closest("[data-eid]");
+        if (t) { removeEdit(+t.dataset.eid); }
+        return;
+      }
+      if (mode !== "text") return;
+      if (p.rot) return info("Эта страница повёрнута, правки на ней не поддерживаются.");
+      var ed = ev.target.closest("[data-eid]");
+      if (ed) { return editExisting(+ed.dataset.eid); }
+      var pt = p.vp.convertToPdfPoint(q[0], q[1]);
+      var items = await textItems(p), hit = null;
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i], h = Math.hypot(it.transform[0], it.transform[1]) || it.height || 10;
+        var e = it.transform[4], f = it.transform[5];
+        if (pt[0] >= e - 1 && pt[0] <= e + it.width + 1 && pt[1] >= f - 0.3 * h && pt[1] <= f + 1.0 * h) { hit = { it: it, h: h, e: e, f: f }; break; }
+      }
+      if (hit) {
+        dialog("Заменить текст", hit.it.str, Math.round(hit.h * 10) / 10, function (txt, size) {
+          if (txt === hit.it.str) return;
+          addEdit({ kind: "text", page: p.n, x: hit.e, y: hit.f, size: size, text: txt,
+            cover: { x: hit.e - 1, y: hit.f - 0.3 * size, w: hit.it.width + 2, h: size * 1.35 } });
+        });
+      } else {
+        dialog("Новый текст", "", 12, function (txt, size) {
+          if (!txt.trim()) return;
+          addEdit({ kind: "text", page: p.n, x: pt[0], y: pt[1] - size * 0.8, size: size, text: txt, cover: null });
+        });
+      }
+    });
+  }
+
+  function addEdit(e) { e.id = nextId++; edits.push(e); refreshOverlay(pages[e.page - 1]); window.__hidePdf(); }
+  function removeEdit(id) {
+    var i = edits.findIndex(function (e) { return e.id === id; }); if (i < 0) return;
+    var pg = edits[i].page; edits.splice(i, 1); refreshOverlay(pages[pg - 1]); window.__hidePdf();
+  }
+  function editExisting(id) {
+    var e = edits.find(function (x) { return x.id === id; }); if (!e || e.kind !== "text") return;
+    dialog("Изменить текст", e.text, e.size, function (txt, size) { e.text = txt; e.size = size; refreshOverlay(pages[e.page - 1]); window.__hidePdf(); });
+  }
+  $("peUndo").onclick = function () { var e = edits.pop(); if (e) { refreshOverlay(pages[e.page - 1]); window.__hidePdf(); } };
+
+  function refreshOverlay(p) {
+    if (!p) return;
+    Array.prototype.slice.call(p.box.querySelectorAll("[data-eid]")).forEach(function (n) { n.remove(); });
+    var s = p.s;
+    function toCss(x, y) { var c = p.vp.convertToViewportPoint(x, y); return c; }
+    edits.filter(function (e) { return e.page === p.n; }).forEach(function (e) {
+      function rect(x, y, w, h, cls) {
+        var a = toCss(x, y + h), d = document.createElement("div"); d.className = cls; d.dataset.eid = e.id;
+        d.style.left = a[0] + "px"; d.style.top = a[1] + "px"; d.style.width = w * s + "px"; d.style.height = h * s + "px";
+        p.box.appendChild(d); return d;
+      }
+      if (e.kind === "rect") rect(e.x, e.y, e.w, e.h, "pe-cover");
+      else {
+        if (e.cover) rect(e.cover.x, e.cover.y, e.cover.w, e.cover.h, "pe-cover");
+        var a = toCss(e.x, e.y), d = document.createElement("div"); d.className = "pe-text"; d.dataset.eid = e.id;
+        d.textContent = e.text; d.style.fontSize = e.size * s + "px";
+        d.style.left = a[0] + "px"; d.style.top = a[1] - e.size * s * 0.95 + "px";
+        p.box.appendChild(d);
+      }
+    });
+  }
+
+  // ---- диалог ввода текста
+  var dlgCb = null;
+  function dialog(title, text, size, cb) {
+    $("dlgTtl").textContent = title; $("dlgText").value = text; $("dlgSize").value = size; dlgCb = cb;
+    $("dlg").classList.add("on"); setTimeout(function () { $("dlgText").focus(); }, 50);
+  }
+  function closeDlg() { $("dlg").classList.remove("on"); dlgCb = null; }
+  $("dlgNo").onclick = closeDlg;
+  $("dlgOk").onclick = function () {
+    var cb = dlgCb, size = parseFloat($("dlgSize").value) || 12; var t = $("dlgText").value; closeDlg();
+    if (cb) cb(t, size);
+  };
+
+  // ---- сохранение
+  $("peSave").onclick = async function () {
+    var b = $("peSave"); b.disabled = true; b.textContent = "…";
+    try {
+      var L = window.PDFLib, out = await L.PDFDocument.load(bytes, { ignoreEncryption: true });
+      var needText = edits.some(function (e) { return e.kind === "text" && e.text.trim(); });
+      var font = null;
+      if (needText) {
+        out.registerFontkit(window.fontkit);
+        if (!fontBytes) { var r = await fetch(U.font); if (!r.ok) throw new Error("Не удалось загрузить шрифт."); fontBytes = await r.arrayBuffer(); }
+        font = await out.embedFont(fontBytes, { subset: true });
+      }
+      var white = L.rgb(1, 1, 1), black = L.rgb(0, 0, 0);
+      edits.forEach(function (e) {
+        var pg = out.getPage(e.page - 1);
+        if (e.kind === "rect") pg.drawRectangle({ x: e.x, y: e.y, width: e.w, height: e.h, color: white });
+        else {
+          if (e.cover) pg.drawRectangle({ x: e.cover.x, y: e.cover.y, width: e.cover.w, height: e.cover.h, color: white });
+          if (e.text.trim()) pg.drawText(e.text, { x: e.x, y: e.y, size: e.size, font: font, color: black, lineHeight: e.size * 1.2 });
+        }
+      });
+      for (var i = pages.length - 1; i >= 0; i--) if (pages[i].gone) out.removePage(i);
+      if (!out.getPageCount()) throw new Error("Нельзя удалить все страницы.");
+      var data = await out.save();
+      var name = fileName.replace(/\.pdf$/i, "") + "-edited.pdf";
+      window.__offerPdf(new Blob([data], { type: "application/pdf" }), name);
+      info("Готово: нажмите «Скачать PDF» вверху.");
+      $("pdfed").scrollTop = 0;
+    } catch (e) { info("Ошибка сохранения: " + (e && e.message || e)); }
+    b.disabled = false; b.textContent = "Сохранить";
+  };
+
+  Array.prototype.forEach.call($("pe-bar").querySelectorAll("[data-mode]"), function (b) { b.onclick = function () { setMode(b.dataset.mode); }; });
 })();
 </script>
 </body>
